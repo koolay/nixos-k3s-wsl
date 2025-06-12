@@ -15,12 +15,12 @@
         config.allowUnfree = true;
       };
       # 导入镜像打包文件
-      k3sImagesTarball = import ./k3s-images.nix { inherit pkgs; };
+      # k3sImagesTarball = import ./k3s-images.nix { inherit pkgs; };
       # Fix the pkgs specialArgs warning by using nixpkgs.pkgs instead
       nixosConfig = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {
-          inherit inputs k3sImagesTarball;
+          # inherit inputs k3sImagesTarball;
         };
         modules = [
           ./configuration.nix
@@ -42,7 +42,7 @@
         # Use the tarballBuilder for WSL distribution
         wsl-distro = nixosConfig.config.system.build.tarballBuilder;
         
-        k3s-images = k3sImagesTarball;
+        # k3s-images = k3sImagesTarball;
         default = self.packages.${system}.wsl-distro;
       };
       # NixOS 配置
