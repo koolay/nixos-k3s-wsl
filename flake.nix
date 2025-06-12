@@ -1,56 +1,59 @@
 {
   description = "NixOS-WSL k3s flake for building and distribution";
-
   inputs = {
-    nixpkgs.url = "github:Nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-
   outputs = { self, nixpkgs, nixos-wsl, ... }@inputs:
-    # 使用 nixpkgs.lib.eachDefaultSystem 迭代支持的系统架构
-    # 这使得你的 flake 可以轻松地在 x86_64 和 aarch64 (如 M1/M2 Mac 上的 aarch64-linux VM) 上构建
-    nixpkgs.lib.eachDefaultSystem (system:
-      let
-        # 为当前系统架构创建 pkgs 实例
-        pkgs = import nixpkgs {
-          inherit system;
-          # 如果你有 overlays, 可以在这里添加
-          # overlays = [ ... ];
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+      # 导入镜像打包文件
+      k3sImagesTarball = import ./k3s-images.nix { inherit pkgs; };
+      # Fix the pkgs specialArgs warning by using nixpkgs.pkgs instead
+      nixosConfig = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = {
+          inherit inputs k3sImagesTarball;
         };
-
-        # 【新增】在这里导入我们创建的镜像打包文件
-        k3sImagesTarball = import ./k3s-images.nix { inherit pkgs; };
-
-        # 将 NixOS 配置提取出来，以便在多个地方使用
-        nixosConfig = nixpkgs.lib.nixosSystem {
-          inherit system;
-          # 通过 specialArgs 将镜像包传递给 configuration.nix
-          specialArgs = {
-            inherit inputs pkgs;
-            # 将打包好的镜像 tarball 作为一个特殊参数传递下去
-            k3sImagesTarball = k3sImagesTarball;
-          };
-
-          modules = [
-            ./configuration.nix
-            nixos-wsl.nixosModules.default
-          ];
-        };
-      in
-      {
-        # 输出 1: 用于 `nixos-rebuild switch` 的常规系统配置
-        nixosConfigurations.nixos = nixosConfig;
-
-        # 输出 2: 用于构建 WSL 压缩包的 package
-        packages.wsl-distro = nixos-wsl.lib.buildWSLDistro {
-          name = "nixos-wsl-distro";
-          configuration = nixosConfig;
-        };
-
-        # (可选) 提供一个默认的 package，这样可以直接运行 `nix build`
-        defaultPackage = self.packages.${system}.wsl-distro;
-      });
+        modules = [
+          ./configuration.nix
+          nixos-wsl.nixosModules.default
+          {
+            # Set nixpkgs.pkgs to avoid the specialArgs warning
+            nixpkgs.pkgs = pkgs;
+            # Override any nixpkgs.config settings from configuration.nix
+            # nixpkgs.config = {
+            #   allowUnfree = true;
+            # };
+          }
+        ];
+      };
+    in
+    {
+      # 构建包
+      packages.${system} = {
+        # Use the tarballBuilder for WSL distribution
+        wsl-distro = nixosConfig.config.system.build.tarballBuilder;
+        
+        k3s-images = k3sImagesTarball;
+        default = self.packages.${system}.wsl-distro;
+      };
+      # NixOS 配置
+      nixosConfigurations.nixos = nixosConfig;
+      # 开发环境
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = with pkgs; [ kubectl kubernetes-helm k3s ];
+        shellHook = ''
+          echo "NixOS-WSL k3s development shell"
+          echo "Commands: nix build .#wsl-distro | nix build .#k3s-images"
+        '';
+      };
+    };
 }

@@ -1,6 +1,20 @@
-# Ignore build outputs from performing a nix-build or `nix build` command
+# Nix build outputs
 result
 result-*
 
-# Ignore automatically generated direnv output
-.direnv
+# Direnv
+.direnv/
+
+# Logs
+*.log
+
+# Editor files
+.vscode/
+*.swp
+*~
+
+# WSL files
+*.tar.gz
+
+# Temporary files
+.tmp/
