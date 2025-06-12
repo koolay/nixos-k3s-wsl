@@ -1,45 +1,14 @@
 { pkgs }:
 
 let
-  # 定义 k3s 需要的核心镜像
-  images = {
-    pause = {
-      name = "registry.k8s.io/pause";
-      tag = "3.9";
-      sha256 = "0jphbq8qwfr5cl7mfqwsb2g23j4rrxxcz9sj98kcn3j66qswjkj6"; # 占位符
-    };
-    coredns = {
-      name = "docker.io/rancher/mirrored-coredns-coredns";
-      tag = "1.10.1";
-      sha256 = "0w7w9w8z3h5x0p4m5k7v5xf1pz6j8y7z4k2q3n2h8s1w6x2f7g9j"; # 占位符
-    };
-    local-path-provisioner = {
-      name = "docker.io/rancher/local-path-provisioner";
-      tag = "v0.0.26";
-      sha256 = "126m0f9y3f1406y697f4v6x4k9qaj6j28v6l30r8y7q1s50f68d6"; # 占位符
-    };
-    metrics-server = {
-      name = "docker.io/rancher/mirrored-metrics-server-metrics-server";
-      tag = "v0.6.4";
-      sha256 = "1z4j2y7x8v8d8j7s9d8x5z1w6q4e8r7t3y2u1i0o9p8l7k6j5h4g"; # 占位符
-    };
-  };
-
-  # 拉取所有镜像
-  pulledImages = pkgs.lib.mapAttrs (name: config: 
-    pkgs.dockerTools.pullImage {
-      imageName = config.name;
-      imageTag = config.tag;
-      sha256 = config.sha256;
-      finalImageName = config.name; # 最好加上这个，确保 manifest.json 中的名字正确
-      finalImageTag = config.tag;
-    }
-  ) images;
-
+  # 使用 'let' 来定义局部变量
+  k3sVersion = "v1.33.1%2Bk3s1";
 in
-# --- 最终修改点在这里 ---
-pkgs.dockerTools.combineTarballs {
-  name = "k3s-airgap-images.tar.gz"; # 输出文件名现在包含 .gz
-  tars = builtins.attrValues pulledImages;
-  # 'compress' 选项在 combineTarballs 中是隐式的，因为输出名是 .gz
-}
+  # 'in' 后面是 let 块的主体
+  pkgs.fetchurl {
+    # 现在我们可以在这里引用上面定义的 k3sVersion 变量
+    url = "https://github.com/k3s-io/k3s/releases/download/${k3sVersion}/k3s-airgap-images-amd64.tar.gz";
+
+    # 这是下载文件的 sha256 哈希值
+    sha256 = "0b1078c30b3528fa4e8d97c414bcacadcfccbb49594314952da43b37043a1f20";
+  }

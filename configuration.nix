@@ -53,8 +53,8 @@
   };
 
   # 容器镜像配置
-  environment.etc."rancher/k3s/agent/images/k3s-airgap-images.tar.gz" = {
-    source = k3sImagesTarball;
+  environment.etc."rancher/k3s/agent/images/k3s-airgap-images-amd64.tar.gz" = {
+    source = k3sImagesTarball; # k3sImagesTarball 现在是下载的 .tar.zst 文件
     mode = "0644";
   };
 
@@ -74,6 +74,11 @@
       experimental-features = ["nix-command" "flakes"];
       auto-optimise-store = true;
       trusted-users = ["root" "pieter"];
+      substituters = [
+        "https://mirror.sjtu.edu.cn/nix-channels/store"
+        "https://nix-community.cachix.org"
+        "https://cache.nixos.org/"
+      ];
     };
   };
 
