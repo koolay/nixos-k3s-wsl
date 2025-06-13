@@ -6,8 +6,18 @@
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # home-manager, used for managing user configuration
+    home-manager = {
+      url = "github:nix-community/home-manager/release-24.11";
+      # The `follows` keyword in inputs is used for inheritance.
+      # Here, `inputs.nixpkgs` of home-manager is kept consistent with
+      # the `inputs.nixpkgs` of the current flake,
+      # to avoid problems caused by different versions of nixpkgs.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    ags.url ="github:Aylur/ags";
   };
-  outputs = { self, nixpkgs, nixos-wsl, ... }@inputs:
+  outputs = { self, nixpkgs, nixos-wsl, home-manager, ags,... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -24,6 +34,7 @@
         };
         modules = [
           ./configuration.nix
+          home-manager.nixosModules.default # 导入 home-manager 模块
           nixos-wsl.nixosModules.default
           {
             # Set nixpkgs.pkgs to avoid the specialArgs warning
